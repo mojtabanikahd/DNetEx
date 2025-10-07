@@ -1,10 +1,8 @@
-# DNetEx Supplementary Code
+# DNetEx
 
-This repository contains all code needed to reproduce the numerical experiments in:
+This repository contains all material needed to reproduce the numerical experiments in:
 
-> **Testing Sparse Differential Network in Gaussian Graphical Models with False Discovery Rate Control**  
-> NeurIPS 2025 Submission
-
+> **DNetEx: FDR-controlled differential network analysis for knowledge discovery from graphs**  
 ---
 
 ## 📂 Repository Structure
