@@ -10,7 +10,7 @@ This repository contains all material needed to reproduce the numerical experime
 ├── SD1/                          # Synthetic data experiment - Scenario 1
 │   ├── main.py                  # Runs the experiment and computes results
 │   ├── plot-figures.ipynb       # Jupyter notebook for plotting results
-│   ├── generate_dataset.py      # Contains dataset generation functions
+│   ├── r_wrappers.py            # rpy2 wrappers calling R helpers (datasets, DNetFinder, optional SPDtrace)
 │   ├── R_codes/                 # R scripts used in this experiment
 │   ├── Data/                    # Directory for raw experimental data
 │   └── Results/                 # Directory for saving generated plots
@@ -18,7 +18,7 @@ This repository contains all material needed to reproduce the numerical experime
 ├── SD2/                          # Synthetic data experiment - Scenario 2
 │   ├── main.py                  # Runs the experiment and computes results
 │   ├── agg.ipynb                # Jupyter notebook for aggregating and plotting results
-│   ├── generate_dataset.py      # Contains dataset generation functions
+│   ├── r_wrappers.py            # rpy2 wrappers calling R helpers (datasets, DNetFinder)
 │   ├── R_codes/                 # R scripts used in this experiment
 │   ├── Data/                    # Directory for raw experimental data
 │   └── Results/                 # Directory for saving generated plots
@@ -61,7 +61,7 @@ The experiments were conducted on **Windows 10** with the following software ver
    ```r
    install.packages(c("GGMselect", "igraph", "DNetFinder"), dependencies = TRUE)
    ```
-   - **Optional R package SPDtrace**: If you call the Python wrapper ``SPDtrace`` in ``SD1/generate_dataset.py`` (via rpy2), you must install [SPDtrace](https://github.com/mojtabanikahd/SPDtrace.git) **in that same R** that Python binds to—not via ``pip``. For example:
+   - **Optional R package SPDtrace**: If you call the Python wrapper ``SPDtrace`` in ``SD1/r_wrappers.py`` (via rpy2), you must install [SPDtrace](https://github.com/mojtabanikahd/SPDtrace.git) **in that same R** that Python binds to—not via ``pip``. For example:
 
    ```r
    install.packages(c("devtools", "remotes"), dependencies = TRUE)

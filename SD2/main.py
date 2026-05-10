@@ -1,4 +1,4 @@
-from generate_dataset import generate_reference_models, DNetFinder_Liu2017
+from r_wrappers import generate_reference_models, DNetFinder_Liu2017
 import numpy as np
 import random
 import pickle
