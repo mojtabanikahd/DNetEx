@@ -4,6 +4,8 @@ import random
 import pickle
 import time
 import pandas as pd
+import os
+os.chdir(os.path.dirname(__file__))
 
 
 np.random.seed(17)

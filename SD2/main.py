@@ -5,7 +5,7 @@ import pickle
 import time
 import pandas as pd
 import os
-
+os.chdir(os.path.dirname(__file__))
 
 np.random.seed(17)
 random.seed(17)
