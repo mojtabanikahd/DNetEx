@@ -61,6 +61,15 @@ The experiments were conducted on **Windows 10** with the following software ver
    ```r
    install.packages(c("GGMselect", "igraph", "DNetFinder"), dependencies = TRUE)
    ```
+   - **Optional R package SPDtrace**: If you call the Python wrapper ``SPDtrace`` in ``SD1/generate_dataset.py`` (via rpy2), you must install [SPDtrace](https://github.com/mojtabanikahd/SPDtrace.git) **in that same R** that Python binds to—not via ``pip``. For example:
+
+   ```r
+   install.packages(c("devtools", "remotes"), dependencies = TRUE)
+   devtools::install_github("mojtabanikahd/SPDtrace")
+   ```
+
+   Follow the upstream instructions (e.g. ``remotes``) if ``devtools`` is not available.
+
    
 
 3. **System Dependencies**  
