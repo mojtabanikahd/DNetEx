@@ -286,16 +286,17 @@ def get_metrics_values(metric_hist):
         else:    
             if len(metric_list) == 0:
                 continue
-            precision_list = [i[3] for i in metric_list]
-            recall_list = [i[4] for i in metric_list]
-            fpr_list = [i[0] for i in metric_list]
-            tpr_list = [i[1] for i in metric_list]
-            fdr_hist.append([i[2] for i in metric_list])
+            metric_list = [t for t in metric_list if len(t) >= 6]
+            precision_list = [t[3] for t in metric_list]
+            recall_list = [t[4] for t in metric_list]
+            fpr_list = [t[0] for t in metric_list]
+            tpr_list = [t[1] for t in metric_list]
+            fdr_hist.append([t[2] for t in metric_list])
             precision_hist.append(precision_list)
             recall_hist.append(recall_list)
             fpr_hist.append(fpr_list)
             tpr_hist.append(tpr_list)
-            q_hist.append([i[5] for i in metric_list])
+            q_hist.append([t[5] for t in metric_list])
         
     tpr_hist = np.array(list(filter(lambda x: x is not None, tpr_hist)))
     fpr_hist = np.array(list(filter(lambda x: x is not None, fpr_hist)))
@@ -352,11 +353,11 @@ def save_metric_files(metric_1):
 
 
 # Sign based Mirror Statistic with different nodes
-d_list = [100, 200]
+d_list = [100, 20]
 n = 100
 s = 10
-c = 30
-rep = 100
+c = 3
+rep = 1
 dimension_metric_list = []
 dimension_metric_list_DNetFinder = []
 
@@ -377,6 +378,7 @@ for d in d_list:
 
 
         # initial dataset split
+        our_method_t0 = time.perf_counter()
         lasso_d1, lasso_d2, ols_d1, ols_d2 = split_dataset_samples(dataset_1, dataset_2, split_ratio=0.5)
 
         # get ols delta hat
@@ -384,6 +386,7 @@ for d in d_list:
 
         # get lasso delta hat
         lasso_delta_hat, e_values, evals = run_lasso(lasso_d1, lasso_d2, real_diff_nodes, ols_delta_hat, c=c*s)
+        our_method_sec = time.perf_counter() - our_method_t0
         p = len(list(ols_delta_hat[np.triu_indices(d,k=0)]))
         l = len(evals)
         print('Our algorithm is finised with time: ', time.time() - st)
@@ -391,13 +394,30 @@ for d in d_list:
         metric_list = []
 
         try:
+            dnetfinder_t0 = time.perf_counter()
             metric_list_DNetFinder = DNetFinder_Liu2017(dataset_1, dataset_2, qs_list, delta_star)
+            dnetfinder_sec = time.perf_counter() - dnetfinder_t0
+            metric_list_DNetFinder["dnetfinder_sec"] = dnetfinder_sec
             metric_list_DNetFinder['run'] = i
             metric_list_DNetFinder['dim'] = d
             sgn_metric_list_hist_DNetFinder.append(metric_list_DNetFinder)
 
         except Exception as e:
-            sgn_metric_list_hist_DNetFinder.append([])
+            dnetfinder_sec = float("nan")
+            metric_list_DNetFinder = pd.DataFrame(
+                {
+                    "alpha": qs_list,
+                    "FPR": [np.nan] * len(qs_list),
+                    "TPR": [np.nan] * len(qs_list),
+                    "FDR": [np.nan] * len(qs_list),
+                    "NPrecision": [np.nan] * len(qs_list),
+                    "NRecall": [np.nan] * len(qs_list),
+                    "dnetfinder_sec": [dnetfinder_sec] * len(qs_list),
+                    "run": [i] * len(qs_list),
+                    "dim": [d] * len(qs_list),
+                }
+            )
+            sgn_metric_list_hist_DNetFinder.append(metric_list_DNetFinder)
             print(i, 'sgn_metric_list_hist_DNetFinder')
 
         for j1 in range(len(qs_list)):
@@ -414,7 +434,7 @@ for d in d_list:
             if max_e == 0:
               eval = np.nan
             fpr, tpr, fdr, precision, recall = get_fpr_tpr(real_H0, real_H1, e_values[k_hat], evals[k_hat])
-            metric_list.append((fpr, tpr, fdr, precision, recall, qs))
+            metric_list.append((fpr, tpr, fdr, precision, recall, qs, our_method_sec))
         sgn_metric_list_hist.append(metric_list)
 
     dimension_metric_list.append(sgn_metric_list_hist)
