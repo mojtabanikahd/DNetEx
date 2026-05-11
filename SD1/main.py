@@ -244,33 +244,24 @@ def get_fpr_tpr(H0_edges, H1_edges, mirror_statistics, cutoff_value):
 def run_lasso(data_1, data_2, real_diff_nodes, ols_delta_hat, c=30):
     s_cov_1 = np.cov(data_1.T)
     s_cov_2 = np.cov(data_2.T)
-    a_set_sa, lam, stop = [], 1000000, False
     evals = []
     e_values = []
-    delta_hats = []
 
-    python_t0 = time.perf_counter()
-    while len(a_set_sa) < c:
-        new_lam, new_a_set_sa, delta_hat = alg_1(s_cov_1, s_cov_2, a_set_sa, lam)
-        if new_lam <= 0:
-            break
-
-        estimated_graph = construct_graph(s_cov_1.shape[0], a_set_sa)
+    r_t0 = time.perf_counter()
+    temp = SPDtrace(s_cov_2, s_cov_1, sparsityLevel=c, verbose=False)
+    active_sets = []
+    for i in range(len(temp["solution_path"])):
+        for j in range(len(temp["solution_path"][i]["active_set"])):
+            active_sets.append((int(temp["solution_path"][i]["active_set"][j]),
+            int(temp["solution_path"][i]["active_set_signs"][j])))
+        estimated_graph = construct_graph(s_cov_1.shape[0], active_sets)
         mirror_stats = generate_mirror_statistics_sgn(ols_delta_hat, estimated_graph)
         eval = np.max(get_e_value_nikahd(mirror_stats, 1))
         evals.append(eval)
         e_values.append(get_e_value_nikahd(mirror_stats, 1))
-        delta_hats.append(delta_hat)
-
-        a_set_sa, lam = new_a_set_sa, new_lam
-    python_sec = time.perf_counter() - python_t0
-    print(f'Python algorithm is finished with time: {python_sec}')
-
-    # r_t0 = time.perf_counter()
-    # temp = SPDtrace(s_cov_1, s_cov_2, sparsityLevel=c, verbose=False)
-    # r_sec = time.perf_counter() - r_t0
-    # print(f'R algorithm is finished with time: {r_sec}')
-    return delta_hats, e_values, evals
+    r_sec = time.perf_counter() - r_t0
+    print(f'SPDtrace R algorithm is finished with time: {r_sec}')
+    return e_values, evals
 
 
 def get_e_value_nikahd(mirror_statistics, cutoff_value):
@@ -385,11 +376,11 @@ def save_metric_files(metric_1):
 
 
 # Sign based Mirror Statistic with different nodes
-d_list = [10, 20]
+d_list = [100, 200]
 n = 100
 s = 10
-c = 3
-rep = 5
+c = 15
+rep = 50
 dimension_metric_list = []
 dimension_metric_list_DNetFinder = []
 dimension_metric_list_DiffNetFDR_Xia2015 = []
@@ -420,7 +411,7 @@ for d in d_list:
         ols_delta_hat = get_delta_hat(ols_d1, ols_d2)
 
         # get lasso delta hat
-        lasso_delta_hat, e_values, evals = run_lasso(lasso_d1, lasso_d2, real_diff_nodes, ols_delta_hat, c=c*s)
+        e_values, evals = run_lasso(lasso_d1, lasso_d2, real_diff_nodes, ols_delta_hat, c=c*s)
         our_method_sec = time.perf_counter() - our_method_t0
         p = len(list(ols_delta_hat[np.triu_indices(d,k=0)]))
         l = len(evals)
@@ -538,10 +529,6 @@ for d in d_list:
     d_sgn_metric_list_hist_DiffNetFDR_Liu2017 = pd.concat(sgn_metric_list_hist_DiffNetFDR_Liu2017, ignore_index=True)
     dimension_metric_list_DiffNetFDR_Liu2017.append(sgn_metric_list_hist_DiffNetFDR_Liu2017)
     d_sgn_metric_list_hist_DiffNetFDR_Liu2017.to_csv(f'Data/{d}_sgn_metric_list_hist_DiffNetFDR_Liu2017.csv', index=False)
-    
-    # d_sgn_metric_list_hist_DNetFinder = pd.concat(sgn_metric_list_hist_DNetFinder, ignore_index=True)
-    # dimension_metric_list_DNetFinder.append(sgn_metric_list_hist_DNetFinder)
-    # d_sgn_metric_list_hist_DNetFinder.to_csv(f'Data/{d}_sgn_metric_list_hist_DNetFinder.csv', index=False)
 
 our_metrics = extract_metrics(dimension_metric_list)
 
