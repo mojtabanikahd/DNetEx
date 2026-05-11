@@ -1,4 +1,4 @@
-from r_wrappers import generate_reference_models, DNetFinder_Liu2017, DiffNetFDR_Xia2015
+from r_wrappers import SPDtrace, generate_reference_models, DNetFinder_Liu2017, DiffNetFDR_Xia2015, DiffNetFDR_Liu2017
 import numpy as np
 import random
 import pickle
@@ -248,6 +248,8 @@ def run_lasso(data_1, data_2, real_diff_nodes, ols_delta_hat, c=30):
     evals = []
     e_values = []
     delta_hats = []
+
+    python_t0 = time.perf_counter()
     while len(a_set_sa) < c:
         new_lam, new_a_set_sa, delta_hat = alg_1(s_cov_1, s_cov_2, a_set_sa, lam)
         if new_lam <= 0:
@@ -261,7 +263,13 @@ def run_lasso(data_1, data_2, real_diff_nodes, ols_delta_hat, c=30):
         delta_hats.append(delta_hat)
 
         a_set_sa, lam = new_a_set_sa, new_lam
+    python_sec = time.perf_counter() - python_t0
+    print(f'Python algorithm is finished with time: {python_sec}')
 
+    # r_t0 = time.perf_counter()
+    # temp = SPDtrace(s_cov_1, s_cov_2, sparsityLevel=c, verbose=False)
+    # r_sec = time.perf_counter() - r_t0
+    # print(f'R algorithm is finished with time: {r_sec}')
     return delta_hats, e_values, evals
 
 
@@ -377,19 +385,21 @@ def save_metric_files(metric_1):
 
 
 # Sign based Mirror Statistic with different nodes
-d_list = [100, 200]
+d_list = [10, 20]
 n = 100
 s = 10
-c = 30
-rep = 50
+c = 3
+rep = 5
 dimension_metric_list = []
 dimension_metric_list_DNetFinder = []
-dimension_metric_list_DiffNetFDR = []
+dimension_metric_list_DiffNetFDR_Xia2015 = []
+dimension_metric_list_DiffNetFDR_Liu2017 = []
 
 for d in d_list:
     sgn_metric_list_hist = []
     sgn_metric_list_hist_DNetFinder = []
-    sgn_metric_list_hist_DiffNetFDR = []
+    sgn_metric_list_hist_DiffNetFDR_Xia2015 = []
+    sgn_metric_list_hist_DiffNetFDR_Liu2017 = []
     qs_list = [i/20 for i in range(2, 21)]
 
     for i in range(rep):
@@ -420,17 +430,17 @@ for d in d_list:
 
         try:
             diffnetfdr_Xia2015_t0 = time.perf_counter()
-            metric_list_DiffNetFDR = DiffNetFDR_Xia2015(dataset_1, dataset_2, qs_list, delta_star)
+            metric_list_DiffNetFDR_Xia2015 = DiffNetFDR_Xia2015(dataset_1, dataset_2, qs_list, delta_star)
             diffnetfdr_Xia2015_sec = time.perf_counter() - diffnetfdr_Xia2015_t0
             print(f'diffnetfdr_Xia2015 algorithm is finished with time: {diffnetfdr_Xia2015_sec}')
-            metric_list_DiffNetFDR["diffnetfinder_sec"] = diffnetfdr_Xia2015_sec
-            metric_list_DiffNetFDR['run'] = i
-            metric_list_DiffNetFDR['dim'] = d
-            sgn_metric_list_hist_DiffNetFDR.append(metric_list_DiffNetFDR)
+            metric_list_DiffNetFDR_Xia2015["diffnetfinder_sec"] = diffnetfdr_Xia2015_sec
+            metric_list_DiffNetFDR_Xia2015['run'] = i
+            metric_list_DiffNetFDR_Xia2015['dim'] = d
+            sgn_metric_list_hist_DiffNetFDR_Xia2015.append(metric_list_DiffNetFDR_Xia2015)
 
         except Exception as e:
-            dnetfinder_sec = float("nan")
-            metric_list_DiffNetFDR = pd.DataFrame(
+            diffnetfinder_sec = float("nan")
+            metric_list_DiffNetFDR_Xia2015 = pd.DataFrame(
                 {
                     "alpha": qs_list,
                     "FPR": [np.nan] * len(qs_list),
@@ -438,27 +448,27 @@ for d in d_list:
                     "FDR": [np.nan] * len(qs_list),
                     "NPrecision": [np.nan] * len(qs_list),
                     "NRecall": [np.nan] * len(qs_list),
-                    "diffnetfinder_sec": [dnetfinder_sec] * len(qs_list),
+                    "diffnetfinder_sec": [diffnetfinder_sec] * len(qs_list),
                     "run": [i] * len(qs_list),
                     "dim": [d] * len(qs_list),
                 }
             )
-            sgn_metric_list_hist_DiffNetFDR.append(metric_list_DiffNetFDR)
-            print(i, 'sgn_metric_list_hist_DiffNetFDR')
+            sgn_metric_list_hist_DiffNetFDR_Xia2015.append(metric_list_DiffNetFDR_Xia2015)
+            print(i, 'sgn_metric_list_hist_DiffNetFDR_Xia2015')
 
         try:
-            dnetfinder_t0 = time.perf_counter()
-            metric_list_DNetFinder = DNetFinder_Liu2017(dataset_1, dataset_2, qs_list, delta_star)
-            dnetfinder_sec = time.perf_counter() - dnetfinder_t0
-            print(f'DNetFinder algorithm is finished with time: {dnetfinder_sec}')
-            metric_list_DNetFinder["dnetfinder_sec"] = dnetfinder_sec
-            metric_list_DNetFinder['run'] = i
-            metric_list_DNetFinder['dim'] = d
-            sgn_metric_list_hist_DNetFinder.append(metric_list_DNetFinder)
+            diffnetfdr_Liu2017_t0 = time.perf_counter()
+            metric_list_DiffNetFDR_Liu2017 = DiffNetFDR_Liu2017(dataset_1, dataset_2, qs_list, delta_star)
+            diffnetfdr_Liu2017_sec = time.perf_counter() - diffnetfdr_Liu2017_t0
+            print(f'diffnetfdr_Liu2017 algorithm is finished with time: {diffnetfdr_Liu2017_sec}')
+            metric_list_DiffNetFDR_Liu2017["diffnetfinder_sec"] = diffnetfdr_Liu2017_sec
+            metric_list_DiffNetFDR_Liu2017['run'] = i
+            metric_list_DiffNetFDR_Liu2017['dim'] = d
+            sgn_metric_list_hist_DiffNetFDR_Liu2017.append(metric_list_DiffNetFDR_Liu2017)
 
         except Exception as e:
-            dnetfinder_sec = float("nan")
-            metric_list_DNetFinder = pd.DataFrame(
+            diffnetfinder_sec = float("nan")
+            metric_list_DiffNetFDR_Liu2017 = pd.DataFrame(
                 {
                     "alpha": qs_list,
                     "FPR": [np.nan] * len(qs_list),
@@ -466,13 +476,41 @@ for d in d_list:
                     "FDR": [np.nan] * len(qs_list),
                     "NPrecision": [np.nan] * len(qs_list),
                     "NRecall": [np.nan] * len(qs_list),
-                    "dnetfinder_sec": [dnetfinder_sec] * len(qs_list),
+                    "diffnetfinder_sec": [diffnetfinder_sec] * len(qs_list),
                     "run": [i] * len(qs_list),
                     "dim": [d] * len(qs_list),
                 }
             )
-            sgn_metric_list_hist_DNetFinder.append(metric_list_DNetFinder)
-            print(i, 'sgn_metric_list_hist_DNetFinder')
+            sgn_metric_list_hist_DiffNetFDR_Liu2017.append(metric_list_DiffNetFDR_Liu2017)
+            print(i, 'sgn_metric_list_hist_DiffNetFDR_Liu2017')
+
+        # try:
+        #     dnetfinder_t0 = time.perf_counter()
+        #     metric_list_DNetFinder = DNetFinder_Liu2017(dataset_1, dataset_2, qs_list, delta_star)
+        #     dnetfinder_sec = time.perf_counter() - dnetfinder_t0
+        #     print(f'DNetFinder algorithm is finished with time: {dnetfinder_sec}')
+        #     metric_list_DNetFinder["dnetfinder_sec"] = dnetfinder_sec
+        #     metric_list_DNetFinder['run'] = i
+        #     metric_list_DNetFinder['dim'] = d
+        #     sgn_metric_list_hist_DNetFinder.append(metric_list_DNetFinder)
+
+        # except Exception as e:
+        #     dnetfinder_sec = float("nan")
+        #     metric_list_DNetFinder = pd.DataFrame(
+        #         {
+        #             "alpha": qs_list,
+        #             "FPR": [np.nan] * len(qs_list),
+        #             "TPR": [np.nan] * len(qs_list),
+        #             "FDR": [np.nan] * len(qs_list),
+        #             "NPrecision": [np.nan] * len(qs_list),
+        #             "NRecall": [np.nan] * len(qs_list),
+        #             "dnetfinder_sec": [dnetfinder_sec] * len(qs_list),
+        #             "run": [i] * len(qs_list),
+        #             "dim": [d] * len(qs_list),
+        #         }
+        #     )
+        #     sgn_metric_list_hist_DNetFinder.append(metric_list_DNetFinder)
+        #     print(i, 'sgn_metric_list_hist_DNetFinder')
 
         for j1 in range(len(qs_list)):
             qs = qs_list[j1]
@@ -493,13 +531,17 @@ for d in d_list:
 
     dimension_metric_list.append(sgn_metric_list_hist)
     
-    d_sgn_metric_list_hist_DiffNetFDR = pd.concat(sgn_metric_list_hist_DiffNetFDR, ignore_index=True)
-    dimension_metric_list_DiffNetFDR.append(sgn_metric_list_hist_DiffNetFDR)
-    d_sgn_metric_list_hist_DiffNetFDR.to_csv(f'Data/{d}_sgn_metric_list_hist_DiffNetFDR.csv', index=False)
+    d_sgn_metric_list_hist_DiffNetFDR = pd.concat(sgn_metric_list_hist_DiffNetFDR_Xia2015, ignore_index=True)
+    dimension_metric_list_DiffNetFDR_Xia2015.append(sgn_metric_list_hist_DiffNetFDR_Xia2015)
+    d_sgn_metric_list_hist_DiffNetFDR.to_csv(f'Data/{d}_sgn_metric_list_hist_DiffNetFDR_Xia2015.csv', index=False)
     
-    d_sgn_metric_list_hist_DNetFinder = pd.concat(sgn_metric_list_hist_DNetFinder, ignore_index=True)
-    dimension_metric_list_DNetFinder.append(sgn_metric_list_hist_DNetFinder)
-    d_sgn_metric_list_hist_DNetFinder.to_csv(f'Data/{d}_sgn_metric_list_hist_DNetFinder.csv', index=False)
+    d_sgn_metric_list_hist_DiffNetFDR_Liu2017 = pd.concat(sgn_metric_list_hist_DiffNetFDR_Liu2017, ignore_index=True)
+    dimension_metric_list_DiffNetFDR_Liu2017.append(sgn_metric_list_hist_DiffNetFDR_Liu2017)
+    d_sgn_metric_list_hist_DiffNetFDR_Liu2017.to_csv(f'Data/{d}_sgn_metric_list_hist_DiffNetFDR_Liu2017.csv', index=False)
+    
+    # d_sgn_metric_list_hist_DNetFinder = pd.concat(sgn_metric_list_hist_DNetFinder, ignore_index=True)
+    # dimension_metric_list_DNetFinder.append(sgn_metric_list_hist_DNetFinder)
+    # d_sgn_metric_list_hist_DNetFinder.to_csv(f'Data/{d}_sgn_metric_list_hist_DNetFinder.csv', index=False)
 
 our_metrics = extract_metrics(dimension_metric_list)
 

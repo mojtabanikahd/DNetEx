@@ -168,19 +168,19 @@ evaluation <- function(estimatedDiffSupport, realDiffSupport, alpha) {
   results
 }
 
-# DiffNetFDR_Liu2017 <- function(SA, SB, alphas, delta_star){
-#   library(DiffNetFDR)
-#   X <- rbind(SA, SB)
-#   n_A = nrow(SA)
-#   n_B = nrow(SB)
-#   group <- c(rep("A", n_A), rep("B", n_B))
-#   results <- NULL
-#   for(alpha in alphas){                 
-#         pcor.test_Liu2017 <- DiffNet.FDR(X, group, alpha, "pcor")
-#         results <- rbind(results, evaluation(pcor.test_Liu2017$Diff.edge, delta_star, alpha))
-#   }
-#   results
-# }
+DiffNetFDR_Liu2017 <- function(SA, SB, alphas, delta_star){
+  library(DiffNetFDR)
+  X <- rbind(SA, SB)
+  n_A = nrow(SA)
+  n_B = nrow(SB)
+  group <- c(rep("A", n_A), rep("B", n_B))
+  results <- NULL
+  pcor.test_Liu2017 <- DiffNet.FDR(X, group, alphas, "pcor")
+  for(i in 1:length(alphas)){                  
+    results <- rbind(results, evaluation(pcor.test_Liu2017[[i]]$Diff.edge, delta_star, alphas[i]))
+  }
+  results
+}
 
 DiffNetFDR_Xia2015 <- function(SA, SB, alphas, delta_star){
   library(DiffNetFDR)
