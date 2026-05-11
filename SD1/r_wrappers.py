@@ -46,6 +46,31 @@ def DNetFinder_Liu2017(XA, XB, alphas, delta_star):
 
     return output
 
+def DiffNetFDR_Xia2015(XA, XB, alphas, delta_star):
+    pandas2ri.activate()
+    numpy2ri.activate()
+    # Convert Python lists or arrays to numpy arrays and ensure they are C-contiguous
+    XA = np.ascontiguousarray(XA)
+    XB = np.ascontiguousarray(XB)
+    alphas = np.ascontiguousarray(alphas)
+    delta_star = np.ascontiguousarray(delta_star)
+  
+    # Source your R code
+    robjects.r.source('R_codes/Libraray.R')
+    r_func = robjects.globalenv['DiffNetFDR_Xia2015']
+
+    # Convert Python arrays to R matrices
+    r_XA = robjects.r.matrix(XA, nrow=XA.shape[0], ncol=XA.shape[1])
+    r_XB = robjects.r.matrix(XB, nrow=XB.shape[0], ncol=XB.shape[1])
+    r_alphas = FloatVector(alphas)
+    r_delta_star = robjects.r.matrix(delta_star, nrow=delta_star.shape[0], ncol=delta_star.shape[1])
+  
+    # Call the R function
+    output = r_func(r_XA, r_XB, r_alphas, r_delta_star)
+    output = pandas2ri.rpy2py(output)
+
+    return output
+
 
 def _names_as_str_list(nms_attr: Any) -> Optional[list[str]]:
     if nms_attr is None or nms_attr is NULL:

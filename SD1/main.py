@@ -1,4 +1,4 @@
-from r_wrappers import generate_reference_models, DNetFinder_Liu2017
+from r_wrappers import generate_reference_models, DNetFinder_Liu2017, DiffNetFDR_Xia2015
 import numpy as np
 import random
 import pickle
@@ -274,7 +274,7 @@ def get_e_value_nikahd(mirror_statistics, cutoff_value):
 
 
 def get_metrics_values(metric_hist):
-    precision_hist, recall_hist, fpr_hist, tpr_hist, fdr_hist, q_hist = [], [], [], [], [], []
+    precision_hist, recall_hist, fpr_hist, tpr_hist, fdr_hist, q_hist, time_hist = [], [], [], [], [], [], []
     for metric_list in metric_hist:
         if not isinstance(metric_list, list):
             fpr_list = metric_list["FPR"].tolist()
@@ -283,6 +283,7 @@ def get_metrics_values(metric_hist):
             precision_list = metric_list["NPrecision"].tolist()
             fdr_hist = metric_list["FDR"].tolist()
             q_hist = []
+            time_hist = []
         else:    
             if len(metric_list) == 0:
                 continue
@@ -297,6 +298,7 @@ def get_metrics_values(metric_hist):
             fpr_hist.append(fpr_list)
             tpr_hist.append(tpr_list)
             q_hist.append([t[5] for t in metric_list])
+            time_hist.append([t[6] for t in metric_list])
         
     tpr_hist = np.array(list(filter(lambda x: x is not None, tpr_hist)))
     fpr_hist = np.array(list(filter(lambda x: x is not None, fpr_hist)))
@@ -304,6 +306,7 @@ def get_metrics_values(metric_hist):
     recall_hist = np.array(list(filter(lambda x: x is not None, recall_hist)))
     fdr_hist = np.array(list(filter(lambda x: x is not None, fdr_hist)))
     q_hist = np.array(list(filter(lambda x: x is not None, q_hist)))
+    time_hist = np.array(list(filter(lambda x: x is not None, time_hist)))
 
     tpr_mean = column_mean_ignore_none(tpr_hist)
     fpr_mean = column_mean_ignore_none(fpr_hist)
@@ -311,7 +314,9 @@ def get_metrics_values(metric_hist):
     recall_mean = column_mean_ignore_none(recall_hist)
     fdr_mean = column_mean_ignore_none(fdr_hist)
     q_mean = column_mean_ignore_none(q_hist)
-    return tpr_mean, fpr_mean, precision_mean, recall_mean, fdr_mean, q_mean
+    time_mean = column_mean_ignore_none(time_hist)
+    time_sd = column_sd_ignore_none(time_hist)
+    return tpr_mean, fpr_mean, precision_mean, recall_mean, fdr_mean, q_mean, time_mean, time_sd
 
 
 def column_mean_ignore_none(array):
@@ -329,6 +334,21 @@ def column_mean_ignore_none(array):
 
     return np.array(means)
 
+def column_sd_ignore_none(array):
+    sds = []
+    # Transpose the array to iterate over columns (or use axis=0 in masked operations)
+    for col in array.T:
+        # Mask the None values in each column
+        masked_col = np.ma.masked_equal(col, None)
+
+        # Check if all values in the column are None
+        if masked_col.count() == 0:
+            sds.append(np.nan)  # Append NaN if no valid values in the column
+        else:
+            sds.append(masked_col.std(ddof=1))  # Calculate standard deviation for columns with valid values
+
+    return np.array(sds)
+
 
 
 def extract_metrics(metric_list):
@@ -336,14 +356,18 @@ def extract_metrics(metric_list):
     recall_list = []
     fdr_list = []
     qs_list = []
+    time_list_mean = []
+    time_list_sd = []
     for i in range(len(metric_list)):
         metric_list_hist = metric_list[i]
-        tpr_hist_mean, fpr_hist_mean, precision_hist_mean, recall_hist_mean, fdr_hist_mean, qs_hist_mean = get_metrics_values(metric_list_hist)
+        tpr_hist_mean, fpr_hist_mean, precision_hist_mean, recall_hist_mean, fdr_hist_mean, qs_hist_mean, time_hist_mean, time_hist_sd = get_metrics_values(metric_list_hist)
         precision_list.append(precision_hist_mean)
         recall_list.append(recall_hist_mean)
         fdr_list.append(fdr_hist_mean)
         qs_list.append(qs_hist_mean)
-    metrics = [precision_list, recall_list, fdr_list, qs_list]
+        time_list_mean.append(time_hist_mean)
+        time_list_sd.append(time_hist_sd)
+    metrics = [precision_list, recall_list, fdr_list, qs_list, time_list_mean, time_list_sd]
     return metrics
 
 
@@ -353,21 +377,22 @@ def save_metric_files(metric_1):
 
 
 # Sign based Mirror Statistic with different nodes
-d_list = [100, 20]
+d_list = [100, 200]
 n = 100
 s = 10
-c = 3
-rep = 1
+c = 30
+rep = 50
 dimension_metric_list = []
 dimension_metric_list_DNetFinder = []
+dimension_metric_list_DiffNetFDR = []
 
 for d in d_list:
     sgn_metric_list_hist = []
     sgn_metric_list_hist_DNetFinder = []
+    sgn_metric_list_hist_DiffNetFDR = []
     qs_list = [i/20 for i in range(2, 21)]
 
     for i in range(rep):
-        st = time.time()
         print(f'dimension {d} run {i} ------------------------------------------------------------')
         # data generation
         dataset_1, precision_1, cov_1, dataset_2, precision_2, cov_2 = generate_reference_models(
@@ -389,14 +414,43 @@ for d in d_list:
         our_method_sec = time.perf_counter() - our_method_t0
         p = len(list(ols_delta_hat[np.triu_indices(d,k=0)]))
         l = len(evals)
-        print('Our algorithm is finised with time: ', time.time() - st)
+        print('Our algorithm is finised with time: ', our_method_sec)
 
         metric_list = []
+
+        try:
+            diffnetfdr_Xia2015_t0 = time.perf_counter()
+            metric_list_DiffNetFDR = DiffNetFDR_Xia2015(dataset_1, dataset_2, qs_list, delta_star)
+            diffnetfdr_Xia2015_sec = time.perf_counter() - diffnetfdr_Xia2015_t0
+            print(f'diffnetfdr_Xia2015 algorithm is finished with time: {diffnetfdr_Xia2015_sec}')
+            metric_list_DiffNetFDR["diffnetfinder_sec"] = diffnetfdr_Xia2015_sec
+            metric_list_DiffNetFDR['run'] = i
+            metric_list_DiffNetFDR['dim'] = d
+            sgn_metric_list_hist_DiffNetFDR.append(metric_list_DiffNetFDR)
+
+        except Exception as e:
+            dnetfinder_sec = float("nan")
+            metric_list_DiffNetFDR = pd.DataFrame(
+                {
+                    "alpha": qs_list,
+                    "FPR": [np.nan] * len(qs_list),
+                    "TPR": [np.nan] * len(qs_list),
+                    "FDR": [np.nan] * len(qs_list),
+                    "NPrecision": [np.nan] * len(qs_list),
+                    "NRecall": [np.nan] * len(qs_list),
+                    "diffnetfinder_sec": [dnetfinder_sec] * len(qs_list),
+                    "run": [i] * len(qs_list),
+                    "dim": [d] * len(qs_list),
+                }
+            )
+            sgn_metric_list_hist_DiffNetFDR.append(metric_list_DiffNetFDR)
+            print(i, 'sgn_metric_list_hist_DiffNetFDR')
 
         try:
             dnetfinder_t0 = time.perf_counter()
             metric_list_DNetFinder = DNetFinder_Liu2017(dataset_1, dataset_2, qs_list, delta_star)
             dnetfinder_sec = time.perf_counter() - dnetfinder_t0
+            print(f'DNetFinder algorithm is finished with time: {dnetfinder_sec}')
             metric_list_DNetFinder["dnetfinder_sec"] = dnetfinder_sec
             metric_list_DNetFinder['run'] = i
             metric_list_DNetFinder['dim'] = d
@@ -438,10 +492,14 @@ for d in d_list:
         sgn_metric_list_hist.append(metric_list)
 
     dimension_metric_list.append(sgn_metric_list_hist)
+    
+    d_sgn_metric_list_hist_DiffNetFDR = pd.concat(sgn_metric_list_hist_DiffNetFDR, ignore_index=True)
+    dimension_metric_list_DiffNetFDR.append(sgn_metric_list_hist_DiffNetFDR)
+    d_sgn_metric_list_hist_DiffNetFDR.to_csv(f'Data/{d}_sgn_metric_list_hist_DiffNetFDR.csv', index=False)
+    
     d_sgn_metric_list_hist_DNetFinder = pd.concat(sgn_metric_list_hist_DNetFinder, ignore_index=True)
     dimension_metric_list_DNetFinder.append(sgn_metric_list_hist_DNetFinder)
     d_sgn_metric_list_hist_DNetFinder.to_csv(f'Data/{d}_sgn_metric_list_hist_DNetFinder.csv', index=False)
-
 
 our_metrics = extract_metrics(dimension_metric_list)
 

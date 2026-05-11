@@ -130,43 +130,43 @@ DNetFinder_Liu2017 <- function(SA, SB, alphas, delta_star){
 }
 
 
-# evaluation <- function(estimatedDiffSupport, realDiffSupport, alpha) {
-#   realDiffSupport = abs(sign(realDiffSupport))
-#   estimatedDiffSupport = abs(sign(estimatedDiffSupport))
+evaluation <- function(estimatedDiffSupport, realDiffSupport, alpha) {
+  realDiffSupport = abs(sign(realDiffSupport))
+  estimatedDiffSupport = abs(sign(estimatedDiffSupport))
   
-#   realDiffSupport <- realDiffSupport[upper.tri(realDiffSupport)]
-#   estimatedDiffSupport <- estimatedDiffSupport[upper.tri(estimatedDiffSupport)]
+  realDiffSupport <- realDiffSupport[upper.tri(realDiffSupport)]
+  estimatedDiffSupport <- estimatedDiffSupport[upper.tri(estimatedDiffSupport)]
   
-#   # support evaluator
-#   NT <- sum(abs(realDiffSupport) == abs(estimatedDiffSupport))
-#   NTN <- sum(abs(realDiffSupport) == abs(estimatedDiffSupport) & realDiffSupport == 0)
-#   NTP <- NT - NTN
+  # support evaluator
+  NT <- sum(abs(realDiffSupport) == abs(estimatedDiffSupport))
+  NTN <- sum(abs(realDiffSupport) == abs(estimatedDiffSupport) & realDiffSupport == 0)
+  NTP <- NT - NTN
   
-#   NF <- sum(abs(realDiffSupport) != abs(estimatedDiffSupport))
-#   NFP <- sum(abs(realDiffSupport) != abs(estimatedDiffSupport) & realDiffSupport == 0)
-#   NFN <- NF - NFP
+  NF <- sum(abs(realDiffSupport) != abs(estimatedDiffSupport))
+  NFP <- sum(abs(realDiffSupport) != abs(estimatedDiffSupport) & realDiffSupport == 0)
+  NFN <- NF - NFP
   
-#   NTPR <- NTP/(NTP+NFN)
-#   NFPR <- NFP/(NTN+NFP)
+  NTPR <- NTP/(NTP+NFN)
+  NFPR <- NFP/(NTN+NFP)
   
-#   NACC <- NT/(NT+NF)
+  NACC <- NT/(NT+NF)
   
-#   NPrecision <- NA
-#   if(NTP+NFP > 0)
-#     NPrecision <- NTP/(NTP+NFP)
-#   NRecall <- NTP/(NTP+NFN)
+  NPrecision <- NA
+  if(NTP+NFP > 0)
+    NPrecision <- NTP/(NTP+NFP)
+  NRecall <- NTP/(NTP+NFN)
   
-#   FPR = NFP/(NFP+NTN)
-#   TPR = NTP/(NTP+NFN)
-#   FDR = 0
-#   if(NFP+NTP > 0){
-#     FDR = NFP / (NFP+NTP)
-#   }
+  FPR = NFP/(NFP+NTN)
+  TPR = NTP/(NTP+NFN)
+  FDR = 0
+  if(NFP+NTP > 0){
+    FDR = NFP / (NFP+NTP)
+  }
   
-#   results <- data.frame(FPR=FPR, TPR=TPR, FDR=FDR, NPrecision=NPrecision, NRecall=NRecall, alpha=alpha,
-#                         NTP=NTP, NTN=NTN, NFP=NFP, NFN=NFN, NTPR=NTPR, NFPR=NFPR, NACC=NACC)
-#   results
-# }
+  results <- data.frame(FPR=FPR, TPR=TPR, FDR=FDR, NPrecision=NPrecision, NRecall=NRecall, alpha=alpha,
+                        NTP=NTP, NTN=NTN, NFP=NFP, NFN=NFN, NTPR=NTPR, NFPR=NFPR, NACC=NACC)
+  results
+}
 
 # DiffNetFDR_Liu2017 <- function(SA, SB, alphas, delta_star){
 #   library(DiffNetFDR)
@@ -182,16 +182,16 @@ DNetFinder_Liu2017 <- function(SA, SB, alphas, delta_star){
 #   results
 # }
 
-# DiffNetFDR_Xia2015 <- function(SA, SB, alphas, delta_star){
-#   library(DiffNetFDR)
-#   X <- rbind(SA, SB)
-#   n_A = nrow(SA)
-#   n_B = nrow(SB)
-#   group <- c(rep("A", n_A), rep("B", n_B))
-#   results <- NULL
-#   for(alpha in alphas){                  
-#         pmat.test_Xia2015 <- DiffNet.FDR(X, group, alpha, "pmat")
-#         results <- rbind(results, evaluation(pmat.test_Xia2015$Diff.edge, delta_star, alpha))
-#   }
-#   results
-# }
+DiffNetFDR_Xia2015 <- function(SA, SB, alphas, delta_star){
+  library(DiffNetFDR)
+  X <- rbind(SA, SB)
+  n_A = nrow(SA)
+  n_B = nrow(SB)
+  group <- c(rep("A", n_A), rep("B", n_B))
+  results <- NULL
+  pmat.test_Xia2015 <- DiffNet.FDR(X, group, alphas, "pmat")
+  for(i in 1:length(alphas)){                  
+    results <- rbind(results, evaluation(pmat.test_Xia2015[[i]]$Diff.edge, delta_star, alphas[i]))
+  }
+  results
+}
