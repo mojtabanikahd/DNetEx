@@ -8,8 +8,8 @@ import os
 os.chdir(os.path.dirname(__file__))
 
 
-np.random.seed(17)
-random.seed(17)
+np.random.seed(20)
+random.seed(20)
 
 
 def get_kronecker_value(mat1, mat2, i, j):
@@ -256,6 +256,8 @@ def run_lasso(data_1, data_2, real_diff_nodes, ols_delta_hat, c=30):
             int(temp["solution_path"][i]["active_set_signs"][j])))
         estimated_graph = construct_graph(s_cov_1.shape[0], active_sets)
         mirror_stats = generate_mirror_statistics_sgn(ols_delta_hat, estimated_graph)
+        # Set diagonal to zero
+        np.fill_diagonal(mirror_stats, 0)
         eval = np.max(get_e_value_nikahd(mirror_stats, 1))
         evals.append(eval)
         e_values.append(get_e_value_nikahd(mirror_stats, 1))
@@ -265,7 +267,7 @@ def run_lasso(data_1, data_2, real_diff_nodes, ols_delta_hat, c=30):
 
 
 def get_e_value_nikahd(mirror_statistics, cutoff_value):
-    sub_mat = list(mirror_statistics[np.triu_indices(d,k=0)])
+    sub_mat = list(mirror_statistics[np.triu_indices(d,k=1)])
     t1 = len(sub_mat)
     t2 = (mirror_statistics >= cutoff_value).astype(int)
     t3 = 1 + len([i for i in sub_mat if i <= -cutoff_value])
@@ -314,8 +316,10 @@ def get_metrics_values(metric_hist):
     fdr_mean = column_mean_ignore_none(fdr_hist)
     q_mean = column_mean_ignore_none(q_hist)
     time_mean = column_mean_ignore_none(time_hist)
-    time_sd = column_sd_ignore_none(time_hist)
-    return tpr_mean, fpr_mean, precision_mean, recall_mean, fdr_mean, q_mean, time_mean, time_sd
+    time_se = column_se_ignore_none(time_hist)
+    fdr_se = column_se_ignore_none(fdr_hist)
+    recall_se = column_se_ignore_none(recall_hist)
+    return tpr_mean, fpr_mean, precision_mean, recall_mean, fdr_mean, q_mean, time_mean, time_se, fdr_se, recall_se
 
 
 def column_mean_ignore_none(array):
@@ -348,6 +352,21 @@ def column_sd_ignore_none(array):
 
     return np.array(sds)
 
+def column_se_ignore_none(array):
+    ses = []
+    # Transpose the array to iterate over columns (or use axis=0 in masked operations)
+    for col in array.T:
+        # Mask the None values in each column
+        masked_col = np.ma.masked_equal(col, None)
+
+        # Check if all values in the column are None
+        if masked_col.count() == 0:
+            ses.append(np.nan)  # Append NaN if no valid values in the column
+        else:
+            ses.append(masked_col.std(ddof=1)/np.sqrt(masked_col.count()))  # Calculate standard error deviation for columns with valid values
+
+    return np.array(ses)
+
 
 
 def extract_metrics(metric_list):
@@ -356,17 +375,21 @@ def extract_metrics(metric_list):
     fdr_list = []
     qs_list = []
     time_list_mean = []
-    time_list_sd = []
+    time_list_se = []
+    fdr_list_se = []
+    recall_list_se = []
     for i in range(len(metric_list)):
         metric_list_hist = metric_list[i]
-        tpr_hist_mean, fpr_hist_mean, precision_hist_mean, recall_hist_mean, fdr_hist_mean, qs_hist_mean, time_hist_mean, time_hist_sd = get_metrics_values(metric_list_hist)
+        tpr_hist_mean, fpr_hist_mean, precision_hist_mean, recall_hist_mean, fdr_hist_mean, qs_hist_mean, time_hist_mean, time_hist_se, fdr_hist_se, recall_hist_se = get_metrics_values(metric_list_hist)
         precision_list.append(precision_hist_mean)
         recall_list.append(recall_hist_mean)
         fdr_list.append(fdr_hist_mean)
         qs_list.append(qs_hist_mean)
         time_list_mean.append(time_hist_mean)
-        time_list_sd.append(time_hist_sd)
-    metrics = [precision_list, recall_list, fdr_list, qs_list, time_list_mean, time_list_sd]
+        time_list_se.append(time_hist_se)
+        fdr_list_se.append(fdr_hist_se)
+        recall_list_se.append(recall_hist_se)
+    metrics = [precision_list, recall_list, fdr_list, qs_list, time_list_mean, time_list_se, fdr_list_se, recall_list_se]
     return metrics
 
 
@@ -397,7 +420,7 @@ for d in d_list:
         print(f'dimension {d} run {i} ------------------------------------------------------------')
         # data generation
         dataset_1, precision_1, cov_1, dataset_2, precision_2, cov_2 = generate_reference_models(
-            number_of_nodes=d, number_of_samples=n*d, number_of_changes=s, type="Full", mult=1)
+            number_of_nodes=d, number_of_samples=n*d, number_of_changes=s, type="Full", mult=50, change_type="Random")
         delta_star = precision_1 - precision_2
         real_H0, real_H1 = get_H0_H1(precision_1, precision_2)
         real_diff_nodes = set(get_diff_nodes(delta_star))
@@ -413,7 +436,7 @@ for d in d_list:
         # get lasso delta hat
         e_values, evals = run_lasso(lasso_d1, lasso_d2, real_diff_nodes, ols_delta_hat, c=c*s)
         our_method_sec = time.perf_counter() - our_method_t0
-        p = len(list(ols_delta_hat[np.triu_indices(d,k=0)]))
+        p = len(list(ols_delta_hat[np.triu_indices(d,k=1)]))
         l = len(evals)
         print('Our algorithm is finised with time: ', our_method_sec)
 
@@ -509,7 +532,7 @@ for d in d_list:
             max_e = 0
             evals[0] = np.nan
             for k in range(1,l):
-                e = np.count_nonzero(list(e_values[k][np.triu_indices(d,k=0)]))
+                e = np.count_nonzero(list(e_values[k][np.triu_indices(d,k=1)]))
                 if e > 0 and evals[k] != 0 and evals[k] >= p / (qs * e) and max_e < e:
                     k_hat = k
                     max_e = e
