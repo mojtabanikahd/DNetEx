@@ -6,7 +6,7 @@ library("DNetFinder")
 # create two complete precision matrix
 generate_reference_models <- function(number_of_nodes, number_of_samples, number_of_changes,
                                       type="ScaleFree", density_of_graph = 0.2,
-                                      power = 1, mult=1)
+                                      power = 1, mult=1, change_type="Hub")
 {
   #######################################
   ########### Generate Model ############
@@ -19,7 +19,7 @@ generate_reference_models <- function(number_of_nodes, number_of_samples, number
   
   # create common model
   random_weights <- rnorm(total_possible_edges)
-  random_weights <- random_weights + mult*sign(random_weights)
+  random_weights <- mult*(random_weights + sign(random_weights))
   
   
   # define base of precision matrix
@@ -32,13 +32,23 @@ generate_reference_models <- function(number_of_nodes, number_of_samples, number
   
   change_mask <- matrix(data = 0, nrow = number_of_nodes,
                         ncol = number_of_nodes)
-  indices <- 1:choose(number_of_nodes,2)
-  change_mask[lower.tri(change_mask)] <- indices
-  change_mask <- t(change_mask)
-  change_mask[lower.tri(change_mask)] <- indices
-  mask <- sample(indices,number_of_changes)
-  change_mask[change_mask %in% mask] <- -1
-  change_mask[change_mask != -1] <- 0
+  if(change_type == "Random") {
+    indices <- 1:choose(number_of_nodes,2)
+    change_mask[lower.tri(change_mask)] <- indices
+    change_mask <- t(change_mask)
+    change_mask[lower.tri(change_mask)] <- indices
+    mask <- sample(indices,number_of_changes)
+    change_mask[change_mask %in% mask] <- -1
+    change_mask[change_mask != -1] <- 0
+  } else if(change_type == "Hub") {
+    index_hub <- sample(1:number_of_nodes,1)
+    index_leaf <- sample(setdiff(1:number_of_nodes, index_hub), number_of_changes)
+    change_mask[index_hub, index_leaf] <- -1
+    change_mask[index_leaf, index_hub] <- -1
+  } else {
+    errorCondition(message = "The change_type value is not standard!")
+  }
+
   # create structure
   if(type == "Full") {
     A <- A*matrix(1, nrow = number_of_nodes, ncol = number_of_nodes)

@@ -402,7 +402,7 @@ def save_metric_files(metric_1):
 d_list = [100, 200]
 n = 100
 s = 10
-c = 15
+c = 30
 rep = 50
 dimension_metric_list = []
 dimension_metric_list_DNetFinder = []
@@ -414,13 +414,13 @@ for d in d_list:
     sgn_metric_list_hist_DNetFinder = []
     sgn_metric_list_hist_DiffNetFDR_Xia2015 = []
     sgn_metric_list_hist_DiffNetFDR_Liu2017 = []
-    qs_list = [i/20 for i in range(2, 21)]
+    qs_list = [i/20 for i in range(1, 21)]
 
     for i in range(rep):
         print(f'dimension {d} run {i} ------------------------------------------------------------')
         # data generation
         dataset_1, precision_1, cov_1, dataset_2, precision_2, cov_2 = generate_reference_models(
-            number_of_nodes=d, number_of_samples=n*d, number_of_changes=s, type="Full", mult=50, change_type="Random")
+                number_of_nodes=d, number_of_samples=n*d, number_of_changes=s, type="Erdos", density_of_graph=1, mult=50, change_type="Random")
         delta_star = precision_1 - precision_2
         real_H0, real_H1 = get_H0_H1(precision_1, precision_2)
         real_diff_nodes = set(get_diff_nodes(delta_star))
@@ -497,34 +497,6 @@ for d in d_list:
             )
             sgn_metric_list_hist_DiffNetFDR_Liu2017.append(metric_list_DiffNetFDR_Liu2017)
             print(i, 'sgn_metric_list_hist_DiffNetFDR_Liu2017')
-
-        # try:
-        #     dnetfinder_t0 = time.perf_counter()
-        #     metric_list_DNetFinder = DNetFinder_Liu2017(dataset_1, dataset_2, qs_list, delta_star)
-        #     dnetfinder_sec = time.perf_counter() - dnetfinder_t0
-        #     print(f'DNetFinder algorithm is finished with time: {dnetfinder_sec}')
-        #     metric_list_DNetFinder["dnetfinder_sec"] = dnetfinder_sec
-        #     metric_list_DNetFinder['run'] = i
-        #     metric_list_DNetFinder['dim'] = d
-        #     sgn_metric_list_hist_DNetFinder.append(metric_list_DNetFinder)
-
-        # except Exception as e:
-        #     dnetfinder_sec = float("nan")
-        #     metric_list_DNetFinder = pd.DataFrame(
-        #         {
-        #             "alpha": qs_list,
-        #             "FPR": [np.nan] * len(qs_list),
-        #             "TPR": [np.nan] * len(qs_list),
-        #             "FDR": [np.nan] * len(qs_list),
-        #             "NPrecision": [np.nan] * len(qs_list),
-        #             "NRecall": [np.nan] * len(qs_list),
-        #             "dnetfinder_sec": [dnetfinder_sec] * len(qs_list),
-        #             "run": [i] * len(qs_list),
-        #             "dim": [d] * len(qs_list),
-        #         }
-        #     )
-        #     sgn_metric_list_hist_DNetFinder.append(metric_list_DNetFinder)
-        #     print(i, 'sgn_metric_list_hist_DNetFinder')
 
         for j1 in range(len(qs_list)):
             qs = qs_list[j1]
