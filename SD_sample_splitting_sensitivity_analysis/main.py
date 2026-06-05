@@ -414,7 +414,7 @@ for r in r_list:
             print(f'dimension {d} run {i} ------------------------------------------------------------')
             # data generation
             dataset_1, precision_1, cov_1, dataset_2, precision_2, cov_2 = generate_reference_models(
-                number_of_nodes=d, number_of_samples=n*d, number_of_changes=s, type="Erdos", density_of_graph=1, mult=50, change_type="Random")
+                number_of_nodes=d, number_of_samples=n*d, number_of_changes=s, type="Erdos", density_of_graph=1, mult=1, change_type="Random")
             delta_star = precision_1 - precision_2
             real_H0, real_H1 = get_H0_H1(precision_1, precision_2)
             real_diff_nodes = set(get_diff_nodes(delta_star))
