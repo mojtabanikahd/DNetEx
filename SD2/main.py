@@ -400,7 +400,7 @@ def save_metric_files(metric_1, dir_name):
 
 
 # Sign based Mirror Statistic with different nodes
-d_list = [100]
+d_list = [100, 200]
 n = 10
 s = 10
 c = 30
